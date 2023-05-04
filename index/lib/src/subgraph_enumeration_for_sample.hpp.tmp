@@ -1,10 +1,10 @@
 #pragma once
 #include "auxiliary.hpp"
-#include "feature_counter.hpp"
-#include "cycle_counting.hpp"
-#include "path_counting.hpp"
-#include "embedding.hpp"
-#include "graph.hpp"
+#include "index/feature_counter.hpp"
+#include "index/cycle_counting.hpp"
+#include "index/path_counting.hpp"
+#include "utils/embedding.hpp"
+#include "utils/graph.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -19,6 +19,9 @@ void set_stop_flag(union sigval val){
     *((bool*)val.sival_ptr) = true;
     timer_delete(id);
 }
+
+unordered_map<Vertex, pair<int, float>> vertex_samples;
+unordered_map<Vertex, pair<int, float>> edge_samples;
 
 void register_timer(bool* stop_flag){
     struct timespec spec;
@@ -45,21 +48,13 @@ void register_timer(bool* stop_flag){
     timer_settime(id, 0, &value, NULL);
 }
 
-void subgraph_enumeration_get_candidate_info(Graph* data_graph, Graph* query_graph, 
-    Tensor* query_vertex_emb, Tensor* data_vertex_emb,
-    Tensor* query_edge_emb, Tensor* data_edge_emb,
-    uint32_t& vertex_candidate_num, uint32_t& edge_candidate_num
-){
-    candidate_auxiliary aux(data_graph, query_graph, query_vertex_emb, data_vertex_emb, query_edge_emb, data_edge_emb, false);
-    aux.get_candidate_info(vertex_candidate_num, edge_candidate_num);
-}
-
-void subgraph_enumeration(Graph* data_graph, Graph* query_graph, 
+void subgraph_enumeration_sample(Graph* data_graph, Graph* query_graph, 
     long count_limit, long& result_count, 
     double& enumeration_time, double& preprocessing_time, 
     Tensor* query_vertex_emb, Tensor* data_vertex_emb,
     Tensor* query_edge_emb, Tensor* data_edge_emb,
-    bool enable_order // whether order the candidates
+    bool enable_order, // whether order the candidates,
+    string sample_file
 ){
     stop = false;
     register_timer(&stop);
@@ -69,15 +64,6 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
     gettimeofday(&start_t, NULL);
     
     candidate_auxiliary aux(data_graph, query_graph, query_vertex_emb, data_vertex_emb, query_edge_emb, data_edge_emb, enable_order);
-
-    // release the index
-    // vector<Tensor*> indices = {query_vertex_emb, data_vertex_emb, query_edge_emb, query_edge_emb};
-    // for(auto t : indices){
-    //     if(t == NULL){
-    //         continue;
-    //     }
-    //     delete t;
-    // }
 
     gettimeofday(&end_t, NULL);
     preprocessing_time = get_time(start_t, end_t);
@@ -134,6 +120,49 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
             visited_vertices[v] = true;
             if(cur_depth == query_vertex_count-1){
                 emb_count ++;
+                // keep as the vertex samples
+                for(int u=0;u<query_vertex_count;++u){
+                    auto itf = vertex_samples.find(embedding[u]);
+                    int data_vertex_offset = -1;
+                    for(int y=0;y<aux.candidates[u].candidate.size();++y){
+                        if(aux.candidates[u].candidate[y] == embedding[u]){
+                            data_vertex_offset = y;
+                            break;
+                        }
+                    }
+                    if(data_vertex_offset == -1){
+                        cout<<"error in finding the data vertex from the candidates set"<<endl;
+                    }
+                    float score = aux.calc_score(query_vertex_emb->content[u], data_vertex_emb->content[embedding[u]], data_vertex_emb->column_size);
+                    // if(score > 1){
+                    //     cout<<u<<" "<<embedding[u]<<" "<<score<<endl;
+                    // }
+                    if(itf == vertex_samples.end()){
+                        vertex_samples.insert({embedding[u], {1, score}});
+                    }else{
+                        itf->second.first ++;
+                        itf->second.second += score;
+                    }
+                }
+                
+                // keep as the edge samples
+                for(int u=1;u<query_vertex_count;++u){
+                    for(auto u_n : pre[u]){
+                        Vertex q_e_id = u<u_n ? query_graph->edge_id_map[u][u_n] : query_graph->edge_id_map[u_n][u];
+                        Vertex v = embedding[u];
+                        Vertex v_n = embedding[u_n];
+                        Vertex d_e_id = v<v_n ? data_graph->edge_id_map[v][v_n] : data_graph->edge_id_map[v_n][v];
+                        float score = aux.calc_score(query_edge_emb->content[q_e_id], data_edge_emb->content[d_e_id], data_edge_emb->column_size);
+                        auto itf = edge_samples.find(d_e_id);
+                        if(itf == edge_samples.end()){
+                            edge_samples.insert({d_e_id, {1, score}});
+                        }else{
+                            itf->second.first ++;
+                            itf->second.second += score;
+                        }
+                    }
+                }
+
                 visited_vertices[v] = false;
                 if(emb_count >= count_limit){
                     goto EXIT;
@@ -255,6 +284,17 @@ EXIT:
     if(stop == false){
         timer_delete(id);
     }
+    // write the samples
+    ofstream fout_vertex(sample_file+string("_vertex"));
+    ofstream fout_edge(sample_file+string("_edge"));
+    for(auto p : vertex_samples){
+        fout_vertex<<p.first<<" "<<p.second.first<<" "<<p.second.second<<endl;
+    }
+    for(auto p : edge_samples){
+        fout_edge<<p.first<<" "<<p.second.first<<" "<<p.second.second<<endl;
+    }
+    fout_vertex.close();
+    fout_edge.close();
     result_count = emb_count;
     enumeration_time = get_time(start_t, end_t);
 }

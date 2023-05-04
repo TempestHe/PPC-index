@@ -1,11 +1,4 @@
-#pragma once
-#include "auxiliary.hpp"
-#include "feature_counter.hpp"
-#include "cycle_counting.hpp"
-#include "path_counting.hpp"
-#include "embedding.hpp"
-#include "graph.hpp"
-#include "index.hpp"
+#include "subgraph_retrieval.h"
 
 pair<uint32_t*, int> sum_tensor_safe_without_overflow(Tensor* tensor){
     int column_size = tensor->column_size;
@@ -77,7 +70,7 @@ void sub_containment_vc(vector<Graph>& data_graphs, vector<Graph>& query_graphs,
             if(data_graphs[j].get_edge_count() < query_graphs[i].get_edge_count() || data_graphs[j].adj.size() < query_graphs[i].adj.size()){
                 continue;
             }
-            candidate_auxiliary aux(&(data_graphs[j]), &(query_graphs[i]), NULL, NULL, NULL, NULL, false);
+            Auxiliary aux(&(data_graphs[j]), &(query_graphs[i]), NULL, NULL, NULL, NULL, false);
             for(Vertex u=0;u<query_graphs[i].label_map.size();++u){
                 if(aux.candidates[u].candidate.empty()){
                     filterd = true;
@@ -119,7 +112,7 @@ void sub_containment_vc_index(vector<Graph>& data_graphs, vector<Graph>& query_g
             if(data_graphs[j].get_edge_count() < query_graphs[i].get_edge_count() || data_graphs[j].adj.size() < query_graphs[i].adj.size()){
                 continue;
             }
-            candidate_auxiliary aux(&(data_graphs[j]), &(query_graphs[i]), query_vertex_emb, data_vertex_embs[j], query_edge_emb, data_edge_embs[j], false);
+            Auxiliary aux(&(data_graphs[j]), &(query_graphs[i]), query_vertex_emb, data_vertex_embs[j], query_edge_emb, data_edge_embs[j], false);
 
             for(Vertex u=0;u<query_graphs[i].label_map.size();++u){
                 if(aux.candidates[u].candidate.empty()){

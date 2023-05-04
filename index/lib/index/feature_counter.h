@@ -15,8 +15,8 @@
 #include <ctime>
 
 
-#include "graph.hpp"
-#include "embedding.hpp"
+#include "../graph/graph.h"
+#include "../utility/embedding.h"
 
 class feature_counter{
 public:
