@@ -2,7 +2,7 @@
 Implementation of PPC-index
 
 ## Build
-Under the root directory, there are three directories `dataset`, `index` and `run_exp`. Our project is originally built with cython and invoked by the experiment scripts in `run_exp`. Recently we update the the source code and reorganize our project with cmake. Hence the scripts in `run_exp` is temporarily deprecated. In the future, we will update the source code be compatible with python and the scripts in `run_exp`.
+Under the root directory, there are three directories `dataset`, `index` and `run_exp`. Our project is originally built with cython and invoked by the experimental scripts in `run_exp`. Recently we update the the source code and reorganize our project with cmake. Hence the scripts in `run_exp` are temporarily deprecated. In the future, we will update the source code to be compatible with python and the scripts in `run_exp`.
 
 To build our project, run the following commands
 `cd index/lib`
@@ -31,7 +31,7 @@ where:
 - `--PV, --PE, --CV, --CE`, the indictors that correspond to the PPC-PV, PPC-PE, PPC-CV, PPC-CE indices respectively. They are optional. If one of them, i.e., `--PV` is not put on, then PPC-PV will not be constructed.
 - there are more optional input parameters that can be configured. See more details in the source codes.
 
-After constructions, there are eight files including four indices and four feature files reside in the output directory `../../../../dataset/enumeration/yeast/index`. Note that if some of the target files are already generated, our construction program will skip those generated files to save the time cost.
+After constructions, there are eight files including four indices and four feature files in the output directory `../../../../dataset/enumeration/yeast/index`. Note that if some of the target files are already generated, our construction program will skip those generated files to save the time cost.
 
 ### Subgraph Enumeration
 Secondly, run the following command to conduct subgraph enumeration experiments
@@ -52,12 +52,12 @@ There are more configurable macros in `configuration/config.h`, which can contro
 
 ### Subgraph Retrieval
 Thirdly, run the following commands to conduct subgraph retrieval experiments.
-first construct the index and save to the `--output` directory
+first construct the PPC-indices for dataset pdbs and save them to the `--output` directory
 ```bash
 ./run_build_index.o --data ../../../../dataset/retrieval/pdbs/db.600.gr --se ../../../../dataset/retrieval/pdbs/feature_finding/edge/ --sv ../../../../dataset/retrieval/pdbs/feature_finding/vertex/ --output ../../../../dataset/retrieval/pdbs/index/ --fl 4 --fc 128 --thread 2 --PV --PE --CV --CE
 ```
 
-then start run the subraph retrieval experiments. Our retrieval program can be run in three configurations:
+Then start running the subraph retrieval experiments. Our retrieval program can be run in three configurations:
 1. naive vc-VF mode
 ```bash
 ./run_retrieval.o --query ../../../../dataset/retrieval/pdbs/queries/ --data ../../../../dataset/retrieval/pdbs/db.600.gr --level 0
@@ -85,11 +85,11 @@ To use our generator
 `python generate_queries.py --input ${data_graph} --query_size ${size} --num_queries ${num} --anchor ${anchor} --output ${output}`
 
 where:
-- `--input`, the data graph file(for subgraph retrieval datasets, multiple datagraphs are collected in the same file, our scripts will randomly pick up the datagraph and generate a sample with respect to it)
+- `--input`, the data graph file(for subgraph retrieval datasets, multiple datagraphs are collected in the same file, our scripts will randomly pick up the datagraph and generate a sample for it)
 - `--query_size`, number of vertices in each query
 - `--num_queries`, number of samples
 - `--output`, output directory
-- `--pos_neg`, (optional), we only generate negative sample by default and the negative samples are not easily filtered by NLF and LDF rules.
+- `--pos_neg`, (optional), we only generate negative samples in default and these negative samples are not easily filtered by NLF and LDF rules.
 
 ## Format of the files
 ### format of the graphs
