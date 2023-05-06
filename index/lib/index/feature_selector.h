@@ -27,4 +27,5 @@ public:
     vector<int> select_by_complementariness(vector<bitset<MAX_SAMPLE_NUM>>& result_bit, int sample_num);
 
     vector<vector<Label>> extract_for_singe_graph(vector<Graph>& sample_queries, vector<vector<Vertex>>& sample_query_anchors, vector<vector<Vertex>>& sample_data_anchors, Graph& data_graph, int level, int max_batch_size, int thread_num=1);
+    vector<vector<Label>> extract_for_multi_graph(vector<Graph>& sample_queries, vector<vector<Vertex>>& sample_query_anchors, vector<vector<Vertex>>& sample_data_anchors, vector<Vertex>& data_graph_ids, vector<Graph>& data_graphs, int level, int max_batch_size, int thread_num=1);
 };

@@ -4,7 +4,7 @@ project(PPC-index)
 
 # Set C++ standard to C++11
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -lrt -march=native -O3 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -lrt -march=native -g -O3 ")
 
 
 # Add subdirectories

@@ -382,14 +382,12 @@ int main(){
     // vector<vector<Vertex>> orders;
     // read_orders(string("eu2005.order"), orders);
     
-    string dataset("eu2005");
-    string dataname("eu2005");
     string fnum("128");
-    Graph data_graph("../../../../../../raw_dataset/Dataset/InMem/eu2005/data_graph/eu2005.gr");
-    Index_manager vertex_cycle_manager("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_cycle_vertex.index");
-    Index_manager edge_cycle_manager("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_cycle_edge.index");
-    Index_manager vertex_path_manager("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_path_vertex.index");
-    Index_manager edge_path_manager("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_path_edge.index");
+    Graph data_graph("../../../../../yeast/yeast.gr");
+    Index_manager vertex_cycle_manager("../../../../../yeast/yeast.gr_128_4_1_cycle_vertex.index");
+    Index_manager edge_cycle_manager("../../../../../yeast/yeast.gr_128_4_1_cycle_edge.index");
+    Index_manager vertex_path_manager("../../../../../yeast/yeast.gr_128_4_1_path_vertex.index");
+    Index_manager edge_path_manager("../../../../../yeast/yeast.gr_128_4_1_path_edge.index");
 
     Tensor* vertex_cycle_d = vertex_cycle_manager.load_graph_tensor(0);
     Tensor* vertex_path_d = vertex_path_manager.load_graph_tensor(0);
@@ -403,10 +401,10 @@ int main(){
     delete vertex_cycle_d,vertex_path_d,edge_cycle_d,edge_path_d;
     cout<<"done merging tensors"<<endl;
     // compute the embedding for queries
-    vector<vector<Label>> vertex_cycle_features = load_label_path("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_cycle_vertex.features");
-    vector<vector<Label>> edge_cycle_features = load_label_path("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_cycle_edge.features");
-    vector<vector<Label>> vertex_path_features = load_label_path("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_path_vertex.features");
-    vector<vector<Label>> edge_path_features = load_label_path("../../../../../run_exp/enumeration/.index/eu2005.gr_128_4_1_path_edge.features");
+    vector<vector<Label>> vertex_cycle_features = load_label_path("../../../../../yeast/yeast.gr_128_4_1_cycle_vertex.features");
+    vector<vector<Label>> edge_cycle_features = load_label_path("../../../../../yeast/yeast.gr_128_4_1_cycle_edge.features");
+    vector<vector<Label>> vertex_path_features = load_label_path("../../../../../yeast/yeast.gr_128_4_1_path_vertex.features");
+    vector<vector<Label>> edge_path_features = load_label_path("../../../../../yeast/yeast.gr_128_4_1_path_edge.features");
     
     Cycle_counter c_v_counter = Cycle_counter(true, vertex_cycle_features);
     Path_counter p_v_counter = Path_counter(true, vertex_path_features);
@@ -422,16 +420,16 @@ int main(){
     cout<<"start enumeration"<<endl;
 
     vector<string> query_file = {
-        "../../../../../dataset/enumeration/eu2005/queries/query_edge_8.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_edge_16.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_edge_24.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_edge_32.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_edge_40.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_vertex_8.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_vertex_16.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_vertex_24.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_vertex_32.gr",
-        "../../../../../dataset/enumeration/eu2005/queries/query_vertex_40.gr"
+        "../../../../../yeast/queries/query_edge_8.gr",
+        "../../../../../yeast/queries/query_edge_16.gr",
+        "../../../../../yeast/queries/query_edge_24.gr",
+        "../../../../../yeast/queries/query_edge_32.gr",
+        "../../../../../yeast/queries/query_edge_40.gr",
+        "../../../../../yeast/queries/query_vertex_8.gr",
+        "../../../../../yeast/queries/query_vertex_16.gr",
+        "../../../../../yeast/queries/query_vertex_24.gr",
+        "../../../../../yeast/queries/query_vertex_32.gr",
+        "../../../../../yeast/queries/query_vertex_40.gr"
     };
     int file_id=0;
     double total_enumeration_time = 0.0;
@@ -480,14 +478,13 @@ int main(){
                 subgraph_enumeration(&data_graph, &query_graph, 
                     100000, result_count, 
                     enumeration_time, preprocessing_time, 
-                    // vertex_emb_q, vertex_emb_d,
-                    // edge_emb_q, edge_emb_d,
-                    NULL, NULL,
-                    NULL, NULL,
+                    vertex_emb_q, vertex_emb_d,
+                    edge_emb_q, edge_emb_d,
+                    // NULL, NULL,
+                    // NULL, NULL,
                     true // whether order the candidate
                 );
-                // if(result_count < 100000)
-                    cout<<file<<"-"<<id<<":"<<"query_indexing:"<<get_time(start_t, end_t)<<" result:"<<result_count<<" preprocessing_time:"<<preprocessing_time<<" enumeration_time:"<<enumeration_time<<endl;
+                cout<<file<<"-"<<id<<":"<<"query_indexing:"<<get_time(start_t, end_t)<<" result:"<<result_count<<" preprocessing_time:"<<preprocessing_time<<" enumeration_time:"<<enumeration_time<<endl;
                 delete vertex_emb_q, edge_emb_q;
                 total_enumeration_time += enumeration_time;
                 total_queries += 1;

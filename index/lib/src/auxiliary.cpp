@@ -595,7 +595,6 @@ void Auxiliary::generate_order_by_nucleus_decompostion(){
     //     cout<<"warning: multiple orderings"<<endl;
     // }
     order = generated_orders[0];
-    // order = {5, 19, 2, 10, 24, 36, 22, 33, 31, 17, 15, 14, 29, 9, 25, 23, 8, 11, 16, 12, 4, 1, 0, 37, 13, 27, 34, 30, 21, 32, 18, 7, 26, 20, 3, 28, 35, 39, 6, 38};
 }
 
 // Generate ordering with predecessors
@@ -705,47 +704,47 @@ void Auxiliary::initilize_ancestors(){
 }
 #endif
 
-#ifdef CORE_DECOMPOSITION
-void Auxiliary::query_core_decomposition(){
-    Core composition(query_graph);
+// #ifdef CORE_DECOMPOSITION
+// void Auxiliary::query_core_decomposition(){
+//     Core composition(query_graph);
 
-    cut_vertices.resize(query_vertex_count);
-    memset(&cut_vertices[0], 0, sizeof(bool)*query_vertex_count);
-    parent_cut_vertices.resize(query_vertex_count);
-    memset(&parent_cut_vertices[0], -1, sizeof(int)*query_vertex_count);
+//     cut_vertices.resize(query_vertex_count);
+//     memset(&cut_vertices[0], 0, sizeof(bool)*query_vertex_count);
+//     parent_cut_vertices.resize(query_vertex_count);
+//     memset(&parent_cut_vertices[0], -1, sizeof(int)*query_vertex_count);
 
-    for(auto v : composition.cutVertices){
-        cut_vertices[v] = true;
-    }
+//     for(auto v : composition.cutVertices){
+//         cut_vertices[v] = true;
+//     }
 
-    vector<Vertex> order_offset; // vertex_id to offset
-    order_offset.resize(query_vertex_count);
-    for(uint32_t i=0; i<query_vertex_count; ++i){
-        order_offset[order[i]] = i;
-    }
+//     vector<Vertex> order_offset; // vertex_id to offset
+//     order_offset.resize(query_vertex_count);
+//     for(uint32_t i=0; i<query_vertex_count; ++i){
+//         order_offset[order[i]] = i;
+//     }
 
-    for(auto vec : composition.cores){
+//     for(auto vec : composition.cores){
 
-    }
+//     }
 
-    // print the decomposed query graph
-    // query_graph.print_graph();
-    // cout<<"cores:"<<endl;
-    // for(auto vec : composition.cores){
-    //     cout<<"{";
-    //     for(auto v : vec){
-    //         cout<<v<<", ";
-    //     }
-    //     cout<<"}"<<endl;
-    // }
-    // cout<<"cut vertices:"<<endl;
-    // cout<<"{";
-    // for(auto v : composition.cutVertices){
-    //     cout<<v<<", ";
-    // }
-    // cout<<"}"<<endl;   
-}
-#endif
+//     // print the decomposed query graph
+//     // query_graph.print_graph();
+//     // cout<<"cores:"<<endl;
+//     // for(auto vec : composition.cores){
+//     //     cout<<"{";
+//     //     for(auto v : vec){
+//     //         cout<<v<<", ";
+//     //     }
+//     //     cout<<"}"<<endl;
+//     // }
+//     // cout<<"cut vertices:"<<endl;
+//     // cout<<"{";
+//     // for(auto v : composition.cutVertices){
+//     //     cout<<v<<", ";
+//     // }
+//     // cout<<"}"<<endl;   
+// }
+// #endif
 
 void Auxiliary::generate_search_order(vector<Vertex>& search_order, vector<Vertex>& search_order_offset){
     generate_order_in();
@@ -776,16 +775,13 @@ void Auxiliary::generate_search_order(vector<Vertex>& search_order, vector<Verte
 }
 
 void Auxiliary::generate_order_in(){
-// #ifdef CORE_DECOMPOSITION
-//         // generate_order_in_CORE_DECOMPOSITION_by_chunk();
-//         generate_order_in_CORE_DECOMPOSITION_by_orginal_GQL();
-// #else
-        
-// #endif
-
-        // generate_order_in_GQL();
-        // generate_order_by_predecessors();
+#if ORDERING==0
+    generate_order_in_GQL();
+#elif ORDERING==1
+    generate_order_by_predecessors();
+#elif ORDERING==2
     generate_order_by_nucleus_decompostion();
+#endif
 #ifdef FAILING_SET_PRUNING
     initilize_ancestors();
 #endif

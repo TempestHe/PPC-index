@@ -158,9 +158,9 @@ public:
     void initilize_ancestors();
 #endif
 
-#ifdef CORE_DECOMPOSITION
-    void query_core_decomposition();
-#endif
+// #ifdef CORE_DECOMPOSITION
+//     void query_core_decomposition();
+// #endif
 
     void generate_search_order(vector<Vertex>& search_order, vector<Vertex>& search_order_offset);
 

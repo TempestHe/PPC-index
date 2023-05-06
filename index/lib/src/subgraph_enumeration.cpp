@@ -62,6 +62,279 @@ bool debug(int depth, Vertex* emb, vector<Vertex>& order){
 //     aux.get_candidate_info(vertex_candidate_num, edge_candidate_num);
 // }
 
+bool subgraph_containment_test(Graph* data_graph, Graph* query_graph){
+    bool result = false;
+    Auxiliary aux(data_graph, query_graph, NULL, NULL, NULL, NULL, false);
+
+    vector<Vertex> order;
+    vector<Vertex> order_offset;
+    vector<vector<Vertex>>& pre = aux.predecessor_neighbors;
+    vector<vector<Vertex>>& suc = aux.successor_neighbors;
+    uint32_t query_vertex_count = query_graph->label_map.size();
+    uint32_t data_vertex_count = data_graph->label_map.size();
+    aux.generate_search_order(order, order_offset);
+    // arbitrarily insert a value
+    order.insert(order.begin(), 0);
+    for(int i=0;i<order_offset.size();++i){
+        order_offset[i] += 1;
+    }
+
+#ifdef FAILING_SET_PRUNING
+    vector<bitset<MAX_QUERY_SIZE>>& ancestors = aux.ancestors;
+    // initialize the failing set for each query vertex
+    vector<bitset<MAX_QUERY_SIZE>> failing_set;
+    failing_set.resize(order.size()+1);
+    for(int i=0; i<order.size()+1; ++i){
+        failing_set[i].reset();
+    }
+    // intialize the parent map
+    vector<vector<bitset<MAX_QUERY_SIZE>>> parent_failing_set_map;
+    parent_failing_set_map.resize(query_vertex_count);
+    for(int i=0;i<query_vertex_count; ++i){
+        parent_failing_set_map[i].resize(query_vertex_count);
+    }
+    for(Vertex u=0; u<query_vertex_count; ++u){
+        for(auto successor : suc[u]){
+            parent_failing_set_map[u][successor] = ancestors[u];
+            for(auto parent : pre[successor]){
+                if(order_offset[parent]<order_offset[u]){
+                    parent_failing_set_map[u][successor] |= ancestors[parent];
+                }
+            }
+        }
+    }
+
+#endif
+
+    long emb_count = 0;
+    
+    // start enumeration
+    vector<vector<vector<Vertex>>> candidates_stack, candidates_offset_map_stack;
+
+    candidates_stack.resize(query_vertex_count+1);
+    candidates_offset_map_stack.resize(query_vertex_count+1);
+    
+    // initialize the starting candidates
+    candidates_offset_map_stack[1].push_back({});
+    candidates_stack[1].push_back(aux.candidates[order[1]].candidate);
+    for(int i=0;i<aux.candidates[order[1]].candidate.size(); ++i){
+        candidates_offset_map_stack[1][0].push_back(i);
+    }
+
+    vector<bitset<MAX_QUERY_SIZE>> parent_map;
+    parent_map.resize(query_vertex_count);
+    for(Vertex u=0; u<query_vertex_count; ++u){
+        for(auto p : pre[u]){
+            parent_map[u].set(p);
+        }
+    }
+    
+    bool enable_edge_order = false;
+    Vertex* candidates_offset = new Vertex [query_vertex_count+1];
+    Vertex* embedding = new Vertex [query_vertex_count];
+    Vertex* embedding_offset = new Vertex [query_vertex_count];
+
+    bool* visited_vertices = new bool [data_vertex_count];
+    Vertex* visited_query_vertices = new Vertex [data_vertex_count];
+    memset(visited_vertices, 0, sizeof(bool)*data_vertex_count);
+    memset(candidates_offset, 0, sizeof(Vertex)*(query_vertex_count+1));
+
+    int cur_depth = 1;
+    candidates_offset[cur_depth] = 0;
+    vector<unordered_set<Vertex>>& adj_map = data_graph->adj;
+    tree_node* aux_content = aux.candidates;
+    bool* find_matches = new bool [query_vertex_count+1];
+    find_matches[query_vertex_count] = true;
+
+    vector<float> candidate_score;
+    bool empty_conflict = false;
+
+    Vertex u, v;
+    while(true){
+        while(candidates_offset[cur_depth]<candidates_stack[cur_depth].rbegin()->size()){
+            if(stop==true){
+                goto EXIT;
+            }
+            
+            int current_stack_size = candidates_stack[cur_depth].size()-1;
+            find_matches[cur_depth] = false;
+#ifdef FAILING_SET_PRUNING
+            failing_set[cur_depth].reset();
+#endif
+            u = order[cur_depth];
+            // whether find a full match
+            if(cur_depth == query_vertex_count){
+                for(int i=0;i<candidates_stack[cur_depth][current_stack_size].size(); ++i){
+                    v = candidates_stack[cur_depth][current_stack_size][i];
+                    if(visited_vertices[v] == false){
+
+                        find_matches[cur_depth-1] = true;
+                        find_matches[cur_depth] = true;
+                        emb_count ++;
+                        embedding[u] = v;
+#ifdef FAILING_SET_PRUNING
+                        // belongs to embedding-class
+                        failing_set[cur_depth].reset();
+#endif
+                        result = true;
+                        goto EXIT;
+                    }else{
+#ifdef FAILING_SET_PRUNING
+                        // belongs to conflict-class
+                        failing_set[cur_depth] = ancestors[u] | ancestors[visited_query_vertices[v]];
+#endif
+                    }
+#ifdef FAILING_SET_PRUNING
+                    // updating the failing set of the parent
+                    if(find_matches[cur_depth] == true){
+                        failing_set[cur_depth-1].reset();
+                    }else if(find_matches[cur_depth-1] == false){
+                        failing_set[cur_depth-1] |= failing_set[cur_depth];
+                    }
+#endif
+                }
+                candidates_offset[cur_depth] = candidates_stack[cur_depth].rbegin()->size();
+            }else{
+                uint32_t offset = candidates_offset[cur_depth];
+                u = order[cur_depth];
+                int s = candidates_stack[cur_depth].size();
+                v = candidates_stack[cur_depth][s-1][offset];
+                candidates_offset[cur_depth] ++;
+                if(visited_vertices[v] == true){
+#ifdef FAILING_SET_PRUNING
+                    // belongs to conflict-class
+                    failing_set[cur_depth] = ancestors[u] | ancestors[visited_query_vertices[v]];
+                    // update the failing set of the parent
+                    if(find_matches[cur_depth-1] == false){
+                        failing_set[cur_depth-1] |= failing_set[cur_depth];
+                    }
+#endif
+                    continue;
+                }
+                embedding[u] = v;
+                embedding_offset[u] = candidates_offset_map_stack[cur_depth][current_stack_size][offset];
+                visited_vertices[v] = true;
+                visited_query_vertices[v] = u;
+
+                // start finding the candidates for all the successors
+                bool empty_candidates = false;
+                int suc_offset = 0;
+                for(; suc_offset<suc[u].size(); ++suc_offset){ // auto successor : suc[u]
+                    Vertex successor = suc[u][suc_offset];
+                    uint32_t suc_depth = order_offset[successor];
+                    if(candidates_offset_map_stack[suc_depth].empty()){
+                        candidates_offset_map_stack[suc_depth].push_back(aux_content[u].neighbor_candidates[successor][embedding_offset[u]].first);
+                        candidates_stack[suc_depth].push_back({});
+                        // map the offset in aux to real vertex id
+                        for(auto aux_offset : *(candidates_offset_map_stack[suc_depth].rbegin())){
+                            candidates_stack[suc_depth].rbegin()->push_back(aux_content[successor].candidate[aux_offset]);
+                        }
+                    }else{
+                        // intersect the candidates
+                        vector<Vertex>& current_candidates_offset = *(candidates_offset_map_stack[suc_depth].rbegin());
+                        vector<Vertex>& suc_candidates_offset = aux_content[u].neighbor_candidates[successor][embedding_offset[u]].first;
+                        vector<Vertex> intersected_candidates_offset, intersected_candidates;
+                        for(int i=0,j=0; i<current_candidates_offset.size() && j<suc_candidates_offset.size();){
+                            if(current_candidates_offset[i] == suc_candidates_offset[j]){
+                                Vertex aux_offset = current_candidates_offset[i];
+                                intersected_candidates_offset.push_back(aux_offset);
+                                intersected_candidates.push_back(aux_content[successor].candidate[aux_offset]);
+                                ++i;
+                                ++j;
+                            }else if(current_candidates_offset[i] > suc_candidates_offset[j]){
+                                ++j;
+                            }else{
+                                ++i;
+                            }
+                        }
+                        candidates_offset_map_stack[suc_depth].push_back(intersected_candidates_offset);
+                        candidates_stack[suc_depth].push_back(intersected_candidates);
+                    }
+
+                    if(candidates_stack[suc_depth].rbegin()->empty()){
+                        empty_candidates = true;
+#ifdef FAILING_SET_PRUNING
+                        // failing_set[cur_depth] |= parent_map[successor];
+                        if(failing_set[cur_depth].any() == true){
+                            failing_set[cur_depth] &= parent_failing_set_map[u][successor];
+                        }else{
+                            failing_set[cur_depth] |= parent_failing_set_map[u][successor];
+                        }
+                        
+#endif
+                    }
+                }
+                if(empty_candidates == true){
+                    for(int i=0;i<suc_offset;++i){
+                        Vertex successor = suc[u][i];
+                        uint32_t suc_depth = order_offset[successor];
+                        candidates_offset_map_stack[suc_depth].pop_back();
+                        candidates_stack[suc_depth].pop_back();
+                        candidates_offset[suc_depth] = 0;
+                    }
+                    visited_vertices[v] = false;
+#ifdef FAILING_SET_PRUNING
+                    failing_set[cur_depth-1] |= failing_set[cur_depth];
+#endif
+                    // empty_conflict = true;
+                    // cout<<"empty set:"<<cur_depth<<endl;
+                    continue;
+                }
+                // empty_conflict = false;
+                uint32_t next_depth = cur_depth+1;
+                Vertex next_u = order[next_depth];
+                candidates_offset[next_depth] = 0;
+                cur_depth ++;
+                
+            }
+        }
+
+        cur_depth --;
+        if(cur_depth == 0){
+            break;
+        }
+
+#ifdef FAILING_SET_PRUNING
+        // update the failing_set of the parent
+        if(find_matches[cur_depth] == true){
+            failing_set[cur_depth-1].reset();
+        }else if(find_matches[cur_depth-1]==false){
+            if(failing_set[cur_depth].test(u) == false){
+                failing_set[cur_depth-1] = failing_set[cur_depth];
+                // exit(0);
+            }else{
+                failing_set[cur_depth-1] |= failing_set[cur_depth];
+            }
+        }
+#endif
+
+        for(auto successor : suc[order[cur_depth]]){
+            uint32_t suc_depth = order_offset[successor];
+            candidates_offset_map_stack[suc_depth].pop_back();
+            candidates_stack[suc_depth].pop_back();
+            candidates_offset[suc_depth] = 0;
+        }
+
+#ifdef FAILING_SET_PRUNING
+        find_matches[cur_depth-1] |= find_matches[cur_depth];
+        if(find_matches[cur_depth] == false && failing_set[cur_depth].test(order[cur_depth]) == false){
+            // filtering the redundant siblings
+            candidates_offset[cur_depth] = candidates_stack[cur_depth].rbegin()->size();
+            failing_set[cur_depth-1] |= failing_set[cur_depth];
+        }
+#endif
+        visited_vertices[embedding[order[cur_depth]]] = false;
+    }
+EXIT:
+    delete [] candidates_offset;
+    delete [] embedding;
+    delete [] embedding_offset;
+    delete [] visited_vertices;
+    delete [] visited_query_vertices;
+    delete [] find_matches;
+    return result;
+}
+
 void subgraph_enumeration(Graph* data_graph, Graph* query_graph, 
     long count_limit, long& result_count, 
     double& enumeration_time, double& preprocessing_time, 
@@ -94,6 +367,11 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
         order_offset[i] += 1;
     }
 
+#if AVX>0
+    uint32_t intermediate_buffer_size = 100;
+    Vertex* intermediate_buffer = new Vertex[intermediate_buffer_size];
+#endif
+
 
 #ifdef FAILING_SET_PRUNING
     vector<bitset<MAX_QUERY_SIZE>>& ancestors = aux.ancestors;
@@ -122,11 +400,11 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
 
 #endif
 
-    cout<<"search order:{";
-    for(auto v : order){
-        cout<<v<<", ";
-    }
-    cout<<"}"<<endl;
+    // cout<<"search order:{";
+    // for(auto v : order){
+    //     cout<<v<<", ";
+    // }
+    // cout<<"}"<<endl;
     // cout<<"checkpoint:{";
     // for(auto v : aux.cut_check_point){
     //     cout<<v<<", ";
@@ -280,9 +558,9 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
                         }
                     }else{
                         // intersect the candidates
+#if AVX==0   
                         vector<Vertex>& current_candidates_offset = *(candidates_offset_map_stack[suc_depth].rbegin());
                         vector<Vertex>& suc_candidates_offset = aux_content[u].neighbor_candidates[successor][embedding_offset[u]].first;
-                        
                         vector<Vertex> intersected_candidates_offset, intersected_candidates;
                         for(int i=0,j=0; i<current_candidates_offset.size() && j<suc_candidates_offset.size();){
                             if(current_candidates_offset[i] == suc_candidates_offset[j]){
@@ -299,6 +577,33 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
                         }
                         candidates_offset_map_stack[suc_depth].push_back(intersected_candidates_offset);
                         candidates_stack[suc_depth].push_back(intersected_candidates);
+#else
+                        vector<Vertex>& current_candidates_offset = *(candidates_offset_map_stack[suc_depth].rbegin());
+                        vector<Vertex>& suc_candidates_offset = aux_content[u].neighbor_candidates[successor][embedding_offset[u]].first;
+                        uint32_t intersected_size = 0;
+
+                        if(current_candidates_offset.size() > intermediate_buffer_size){
+                            delete [] intermediate_buffer;
+                            intermediate_buffer_size = current_candidates_offset.size()+100;
+                            intermediate_buffer = new Vertex [intermediate_buffer_size];
+                        }
+
+                        ComputeSetIntersection::ComputeCandidates(&current_candidates_offset[0], current_candidates_offset.size(),
+                                               &suc_candidates_offset[0], suc_candidates_offset.size(),
+                                               intermediate_buffer, intersected_size);
+
+                        vector<Vertex> intersected_candidates;
+
+                        for(int x=0;x<intersected_size;++x){
+                            uint32_t aux_offset = intermediate_buffer[x];
+                            intersected_candidates.push_back(aux_content[successor].candidate[aux_offset]);
+                        } 
+                        candidates_offset_map_stack[suc_depth].push_back({});
+                        vector<Vertex>& last_candidate_offset_map = *candidates_offset_map_stack[suc_depth].rbegin();
+                        last_candidate_offset_map.resize(intersected_size);
+                        memcpy(&(last_candidate_offset_map)[0], intermediate_buffer, intersected_size*sizeof(Vertex));
+                        candidates_stack[suc_depth].push_back(intersected_candidates);
+#endif
                     }
 
                     if(candidates_stack[suc_depth].rbegin()->empty()){
@@ -346,12 +651,6 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
                         candidate_score[i] += score[embedding_offset[last_parent]];
                     }
 
-                    // for(auto parent : pre[next_u]){
-                    //     vector<float>& score = aux_content[parent].neighbor_candidates[next_u][embedding_offset[parent]].second;
-                    //     for(uint32_t i=0; i<num_candidates; ++i){
-                    //         candidate_score[i] += score[embedding_offset[parent]];
-                    //     }
-                    // }
                     // reorder the candidates
                     vector<Vertex>& candidate_offset = *(candidates_offset_map_stack[next_depth].rbegin());
                     vector<Vertex>& candidates = *(candidates_stack[next_depth].rbegin());
@@ -401,14 +700,6 @@ void subgraph_enumeration(Graph* data_graph, Graph* query_graph,
             // filtering the redundant siblings
             candidates_offset[cur_depth] = candidates_stack[cur_depth].rbegin()->size();
             failing_set[cur_depth-1] |= failing_set[cur_depth];
-            // cout<<"failing set:"<<cur_depth<<endl;
-            // if(cur_depth==35){
-            //     // for(Vertex d=1; d<=cur_depth;++d){
-            //     //     cout<<embedding[order[d]]<<" ";
-            //     // }
-            //     // cout<<endl;
-            //     cout<<emb_count<<endl;
-            // }
         }
 #endif
         visited_vertices[embedding[order[cur_depth]]] = false;
@@ -420,6 +711,10 @@ EXIT:
     delete [] visited_vertices;
     delete [] visited_query_vertices;
     delete [] find_matches;
+#if AVX>0
+    delete [] intermediate_buffer;
+#endif
+
     gettimeofday(&end_t, NULL);
     if(stop == false){
         timer_delete(id);

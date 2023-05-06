@@ -143,6 +143,61 @@ bool vec_validation(Value* t1, Value* t2, int size){
         }
     }
     return true;
+#elif AVX==1
+    size_t value_bitsize = sizeof(Value)*8;
+    for(int i=0; i<size*value_bitsize/256; ++i){
+        if(value_bitsize == 16){
+            __m256i src;
+            __mmask16 k = -1;
+            __m256i t1_vec = _mm256_mask_loadu_epi16(src, k, (__m256i*)t1+i);
+            __m256i t2_vec = _mm256_mask_loadu_epi16(src, k, (__m256i*)t2+i);
+            __mmask16 cmp_result = _mm256_cmp_epu16_mask(t1_vec, t2_vec, 6);
+            
+            if(cmp_result > 0){
+                return false;
+            }
+        }else if(value_bitsize == 32){
+            __m256i t1_vec = _mm256_loadu_si256((__m256i*)t1+i);
+            __m256i t2_vec = _mm256_loadu_si256((__m256i*)t2+i);
+            __mmask8 cmp_result = _mm256_cmp_epu32_mask(t1_vec, t2_vec, 6);
+
+            if(cmp_result > 0){
+                return false;
+            }
+        }else{
+            cout<<"value type not supported"<<endl;
+            exit(0);
+        }
+    }
+    int remains = (size*value_bitsize%256)/value_bitsize;
+    if(remains>0){
+        int offset = size*value_bitsize/256;
+        if(value_bitsize == 16){
+            __mmask16 mask = 1<<remains-1;
+            __m256i src = _mm256_set_epi32(0,0,0,0,0,0,0,0);
+            __m256i t1_vec = _mm256_mask_expandloadu_epi16(src, mask, (__m256i*)t1+offset);
+            __m256i t2_vec = _mm256_mask_expandloadu_epi16(src, mask, (__m256i*)t2+offset);
+            __mmask32 result = _mm256_cmp_epi16_mask(t1_vec, t2_vec, 6);
+            
+            if(result > 0){
+                return false;
+            }
+        }else if(value_bitsize == 32){
+            __mmask8 mask = 1<<remains-1;
+            __m256i src = _mm256_set_epi32(0,0,0,0,0,0,0,0);
+            __m256i t1_vec = _mm256_mask_expandloadu_epi32(src, mask, (__m256i*)t1+offset);
+            __m256i t2_vec = _mm256_mask_expandloadu_epi32(src, mask, (__m256i*)t2+offset);
+            __mmask8 result = _mm256_cmp_epu32_mask(t1_vec, t2_vec, 6);
+            
+            if(result > 0){
+                return false;
+            }
+        }else{
+            cout<<"value type not supported"<<endl;
+            exit(0);
+        }
+    }
+    return true;
 #else
     for(int i=0;i<size;++i){
         if(t1[i]>t2[i]){

@@ -222,7 +222,6 @@ void Index_constructer::construct_index_in_batch(Graph& graph, string index_file
                 vector<bool> mask;
                 mask.assign(redundant_mask[i].begin()+feature_offset, redundant_mask[i].begin()+feature_offset+max_feature_size_per_batch);
                 remove(index_file_name_split.c_str());
-                cout<<"dumping index with mask"<<endl;
                 dump_index_with_mask(result[i], index_file_name_split, mask);
             }
         }else{
@@ -230,7 +229,6 @@ void Index_constructer::construct_index_in_batch(Graph& graph, string index_file
             index_splits[0].push_back(index_file_name_split);
             Index_manager manager(index_file_name_split);
             remove(index_file_name_split.c_str());
-            cout<<"dumping index with no mask"<<endl;
             manager.dump_tensor(result[0]);
         }
         for(auto r : result){
@@ -241,7 +239,9 @@ void Index_constructer::construct_index_in_batch(Graph& graph, string index_file
         feature_offset += max_feature_size_per_batch;
     }
     if(feature_offset < label_path_origin.size()){
+#ifdef PRINT_BUILD_PROGRESS
         cout<<"building progress final:split_num:"<<split_num<<":("<<label_path_origin.size()/max_feature_size_per_batch+1<<")"<<endl;
+#endif
         vector<vector<Label>> label_paths_tmp;
         label_paths_tmp.assign(label_path_origin.begin()+feature_offset, label_path_origin.end());
         feature_counter* split_counter;

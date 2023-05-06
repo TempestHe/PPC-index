@@ -19,6 +19,8 @@ void subgraph_enumeration_get_candidate_info(Graph* data_graph, Graph* query_gra
     uint32_t& vertex_candidate_num, uint32_t& edge_candidate_num
 );
 
+bool subgraph_containment_test(Graph* data_graph, Graph* query_graph);
+
 void subgraph_enumeration(Graph* data_graph, Graph* query_graph, 
     long count_limit, long& result_count, 
     double& enumeration_time, double& preprocessing_time, 

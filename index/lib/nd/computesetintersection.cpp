@@ -4,90 +4,93 @@
 size_t ComputeSetIntersection::galloping_cnt_ = 0;
 size_t ComputeSetIntersection::merge_cnt_ = 0;
 
-void ComputeSetIntersection::ComputeCandidates(const VertexID* larray, const ui l_count,
-                                               const VertexID* rarray, const ui r_count,
-                                               VertexID* cn, ui &cn_count) {
+void ComputeSetIntersection::ComputeCandidates(const Vertex* larray, const ui l_count,
+                                               const Vertex* rarray, const ui r_count,
+                                               Vertex* cn, ui &cn_count) {
 #if HYBRID == 0
-    #if SI == 0
-    if (l_count / 50 > r_count || r_count / 50 > l_count) {
-        galloping_cnt_ += 1;
-        return ComputeCNGallopingAVX2(larray, l_count, rarray, r_count, cn, cn_count);
-    }
-    else {
-        merge_cnt_ += 1;
-        return ComputeCNMergeBasedAVX2(larray, l_count, rarray, r_count, cn, cn_count);
-    }
-    #elif SI == 1
-    if (l_count / 50 > r_count || r_count / 50 > l_count) {
-        galloping_cnt_ += 1;
-        return ComputeCNGallopingAVX512(larray, l_count, rarray, r_count, cn, cn_count);
-    }
-    else {
-        merge_cnt_ += 1;
-        return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn, cn_count);
-    }
-    #elif SI == 2
-    if (l_count / 50 > r_count || r_count / 50 > l_count) {
-        galloping_cnt_ += 1;
-        return ComputeCNGalloping(larray, l_count, rarray, r_count, cn, cn_count);
-    }
-    else {
-        merge_cnt_ += 1;
-        return ComputeCNNaiveStdMerge(larray, l_count, rarray, r_count, cn, cn_count);
-    }
+    #if AVX>0
+        if (l_count / 50 > r_count || r_count / 50 > l_count) {
+            galloping_cnt_ += 1;
+            return ComputeCNGallopingAVX2(larray, l_count, rarray, r_count, cn, cn_count);
+        }
+        else {
+            merge_cnt_ += 1;
+            return ComputeCNMergeBasedAVX2(larray, l_count, rarray, r_count, cn, cn_count);
+        }
+    #else
+        if (l_count / 50 > r_count || r_count / 50 > l_count) {
+            galloping_cnt_ += 1;
+            return ComputeCNGalloping(larray, l_count, rarray, r_count, cn, cn_count);
+        }
+        else {
+            merge_cnt_ += 1;
+            return ComputeCNNaiveStdMerge(larray, l_count, rarray, r_count, cn, cn_count);
+        }
+    // # elif AVX==2 // to be corrected
+    //     if (l_count / 50 > r_count || r_count / 50 > l_count) {
+    //         galloping_cnt_ += 1;
+    //         return ComputeCNGallopingAVX512(larray, l_count, rarray, r_count, cn, cn_count);
+    //     }
+    //     else {
+    //         merge_cnt_ += 1;
+    //         return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn, cn_count);
+    //     }
     #endif
+
 #elif HYBRID == 1
-    #if SI == 0
+    #if AVX>0
         return ComputeCNMergeBasedAVX2(larray, l_count, rarray, r_count, cn, cn_count);
-    #elif SI == 1
-        return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn, cn_count);
-    #elif SI == 2
+    #else
         return ComputeCNNaiveStdMerge(larray, l_count, rarray, r_count, cn, cn_count);
+    // #elif AVX==2
+    //     return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn, cn_count);
     #endif
 #endif
 }
 
-void ComputeSetIntersection::ComputeCandidates(const VertexID* larray, const ui l_count,
-                                               const VertexID* rarray, const ui r_count,
+void ComputeSetIntersection::ComputeCandidates(const Vertex* larray, const ui l_count,
+                                               const Vertex* rarray, const ui r_count,
                                                ui &cn_count) {
 #if HYBRID == 0
-    #if SI == 0
+    #if AVX>0
         if (l_count / 32 > r_count || r_count / 32 > l_count) {
             return ComputeCNGallopingAVX2(larray, l_count, rarray, r_count, cn_count);
         }
         else {
             return ComputeCNMergeBasedAVX2(larray, l_count, rarray, r_count, cn_count);
         }
-    #elif SI == 1
-        if (l_count / 32 > r_count || r_count / 32 > l_count) {
-            return ComputeCNGallopingAVX512(larray, l_count, rarray, r_count, cn_count);
-        }
-        else {
-            return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn_count);
-        }
-    #elif SI == 2
+    #else
         if (l_count / 32 > r_count || r_count / 32 > l_count) {
             return ComputeCNGalloping(larray, l_count, rarray, r_count, cn_count);
         }
         else {
             return ComputeCNNaiveStdMerge(larray, l_count, rarray, r_count, cn_count);
         }
+    // #elif AVX==2
+    //     if (l_count / 32 > r_count || r_count / 32 > l_count) {
+    //         return ComputeCNGallopingAVX512(larray, l_count, rarray, r_count, cn_count);
+    //     }
+    //     else {
+    //         return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn_count);
+    //     }
     #endif
+
 #elif HYBRID == 1
-    #if SI == 0
+    #if AVX>0
         return ComputeCNMergeBasedAVX2(larray, l_count, rarray, r_count, cn_count);
-    #elif SI == 1
-        return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn_count);
-    #elif SI == 2
+    #else
         return ComputeCNNaiveStdMerge(larray, l_count, rarray, r_count, cn_count);
+    // #elif AVX==2
+    //     return ComputeCNMergeBasedAVX512(larray, l_count, rarray, r_count, cn_count);
     #endif
 #endif
 }
 
-#if SI == 0
-void ComputeSetIntersection::ComputeCNGallopingAVX2(const VertexID* larray, const ui l_count,
-                                                    const VertexID* rarray, const ui r_count,
-                                                    VertexID* cn, ui &cn_count) {
+
+#if AVX>0
+void ComputeSetIntersection::ComputeCNGallopingAVX2(const Vertex* larray, const ui l_count,
+                                                    const Vertex* rarray, const ui r_count,
+                                                    Vertex* cn, ui &cn_count) {
     cn_count = 0;
 
     if (l_count == 0 || r_count == 0)
@@ -133,8 +136,8 @@ void ComputeSetIntersection::ComputeCNGallopingAVX2(const VertexID* larray, cons
     }
 }
 
-void ComputeSetIntersection::ComputeCNGallopingAVX2(const VertexID* larray, const ui l_count,
-                                                    const VertexID* rarray, const ui r_count,
+void ComputeSetIntersection::ComputeCNGallopingAVX2(const Vertex* larray, const ui l_count,
+                                                    const Vertex* rarray, const ui r_count,
                                                     ui &cn_count) {
     cn_count = 0;
 
@@ -181,9 +184,9 @@ void ComputeSetIntersection::ComputeCNGallopingAVX2(const VertexID* larray, cons
     }
 }
 
-void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const VertexID* larray, const ui l_count,
-                                                     const VertexID* rarray, const ui r_count,
-                                                     VertexID* cn, ui &cn_count) {
+void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const Vertex* larray, const ui l_count,
+                                                     const Vertex* rarray, const ui r_count,
+                                                     Vertex* cn, ui &cn_count) {
     cn_count = 0;
 
     if (l_count == 0 || r_count == 0)
@@ -207,7 +210,7 @@ void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const VertexID* larray, con
 
     __m256i per_u_order = _mm256_set_epi32(1, 1, 1, 1, 0, 0, 0, 0);
     __m256i per_v_order = _mm256_set_epi32(3, 2, 1, 0, 3, 2, 1, 0);
-    VertexID* cur_back_ptr = cn;
+    Vertex* cur_back_ptr = cn;
 
     auto size_ratio = (rc) / (lc);
     if (size_ratio > 2) {
@@ -317,8 +320,8 @@ void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const VertexID* larray, con
     return;
 }
 
-void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const VertexID* larray, const ui l_count,
-                                                     const VertexID* rarray, const ui r_count,
+void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const Vertex* larray, const ui l_count,
+                                                     const Vertex* rarray, const ui r_count,
                                                      ui &cn_count) {
     cn_count = 0;
 
@@ -446,7 +449,7 @@ void ComputeSetIntersection::ComputeCNMergeBasedAVX2(const VertexID* larray, con
     return;
 }
 
-const ui ComputeSetIntersection::BinarySearchForGallopingSearchAVX2(const VertexID* array, ui offset_beg, ui offset_end, ui val) {
+const ui ComputeSetIntersection::BinarySearchForGallopingSearchAVX2(const Vertex* array, ui offset_beg, ui offset_end, ui val) {
     while (offset_end - offset_beg >= 16) {
         auto mid = static_cast<uint32_t>((static_cast<unsigned long>(offset_beg) + offset_end) / 2);
         _mm_prefetch((char *) &array[(static_cast<unsigned long>(mid + 1) + offset_end) / 2], _MM_HINT_T0);
@@ -482,7 +485,7 @@ const ui ComputeSetIntersection::BinarySearchForGallopingSearchAVX2(const Vertex
     return offset_end;
 }
 
-const ui ComputeSetIntersection::GallopingSearchAVX2(const VertexID* array, ui offset_beg, ui offset_end, ui val) {
+const ui ComputeSetIntersection::GallopingSearchAVX2(const Vertex* array, ui offset_beg, ui offset_end, ui val) {
     if (array[offset_end - 1] < val) {
         return offset_end;
     }
@@ -520,365 +523,11 @@ const ui ComputeSetIntersection::GallopingSearchAVX2(const VertexID* array, ui o
     }
 }
 
-#elif SI == 1
-void ComputeSetIntersection::ComputeCNGallopingAVX512(const VertexID* larray, const ui l_count,
-                                                          const VertexID* rarray, const ui r_count,
-                                                          VertexID* cn, ui &cn_count) {
-    cn_count = 0;
+#else
 
-    if (l_count == 0 || r_count == 0)
-        return;
-
-    ui lc = l_count;
-    ui rc = r_count;
-
-    if (lc > rc) {
-        auto tmp = larray;
-        larray = rarray;
-        rarray = tmp;
-
-        ui tmp_count = lc;
-        lc = rc;
-        rc = tmp_count;
-    }
-
-    ui li = 0;
-    ui ri = 0;
-
-    while (true) {
-        while (larray[li] < rarray[ri]) {
-            li += 1;
-            if (li >= lc) {
-                return;
-            }
-        }
-
-        ri = Utility::GallopingSearchAVX512(rarray, ri, rc, larray[li]);
-        if (ri >= rc) {
-            return;
-        }
-
-        if (larray[li] == rarray[ri]) {
-            cn[cn_count++] = larray[li];
-            li += 1;
-            ri += 1;
-            if (li >= lc || ri >= rc) {
-                return;
-            }
-        }
-    }
-}
-
-void ComputeSetIntersection::ComputeCNGallopingAVX512(const VertexID* larray, const ui l_count,
-                                                          const VertexID* rarray, const ui r_count,
-                                                          ui &cn_count) {
-    cn_count = 0;
-
-    if (l_count == 0 || r_count == 0)
-        return;
-
-    ui lc = l_count;
-    ui rc = r_count;
-
-    if (lc > rc) {
-        auto tmp = larray;
-        larray = rarray;
-        rarray = tmp;
-
-        ui tmp_count = lc;
-        lc = rc;
-        rc = tmp_count;
-    }
-
-    ui li = 0;
-    ui ri = 0;
-
-    while (true) {
-        while (larray[li] < rarray[ri]) {
-            li += 1;
-            if (li >= lc) {
-                return;
-            }
-        }
-
-        ri = Utility::GallopingSearchAVX512(rarray, ri, rc, larray[li]);
-        if (ri >= rc) {
-            return;
-        }
-
-        if (larray[li] == rarray[ri]) {
-            cn_count += 1;
-            li += 1;
-            ri += 1;
-            if (li >= lc || ri >= rc) {
-                return;
-            }
-        }
-    }
-}
-
-void ComputeSetIntersection::ComputeCNMergeBasedAVX512(const VertexID* larray, const ui l_count,
-                                                       const VertexID* rarray, const ui r_count,
-                                                       VertexID* cn, ui &cn_count) {
-    cn_count = 0;
-
-    if (l_count == 0 || r_count == 0)
-        return;
-
-    ui lc = l_count;
-    ui rc = r_count;
-
-    if (lc > rc) {
-        auto tmp = larray;
-        larray = rarray;
-        rarray = tmp;
-
-        ui tmp_count = lc;
-        lc = rc;
-        rc = tmp_count;
-    }
-
-    ui li = 0;
-    ui ri = 0;
-
-    __m512i st = _mm512_set_epi32(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
-
-    VertexID* cur_back_ptr = cn;
-
-    auto size1 = (rc) / (lc);
-    if (size1 > 2) {
-        if (li < lc && ri + 15 < rc) {
-            __m512i u_elements = _mm512_set1_epi32(larray[li]);
-            __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-
-            while (true) {
-                __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements, v_elements);
-                if (mask != 0x0000) {
-                    // write back
-                    _mm512_mask_compressstoreu_epi32(cur_back_ptr, mask, u_elements);
-                    cur_back_ptr += _popcnt32(mask);
-                }
-
-                if (larray[li] > rarray[ri + 15]) {
-                    ri += 16;
-                    if (ri + 15 >= rc) {
-                        break;
-                    }
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                } else {
-                    li += 1;
-                    if (li >= lc) {
-                        break;
-                    }
-                    u_elements = _mm512_set1_epi32(larray[li]);
-                }
-            }
-        }
-    } else {
-        if (li + 3 < lc && ri + 3 < rc) {
-            __m512i u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-            __m512i u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-            __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-            __m512i v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-
-            while (true) {
-                __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements_per, v_elements_per);
-                if (mask != 0x0000) {
-                    // write back
-                    _mm512_mask_compressstoreu_epi32(cur_back_ptr, mask, u_elements_per);
-                    cur_back_ptr += _popcnt32(mask);
-                }
-
-                if (larray[li + 3] > rarray[ri + 3]) {
-                    ri += 4;
-                    if (ri + 3 >= rc) {
-                        break;
-                    }
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                    v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-                } else if (larray[li + 3] < rarray[ri + 3]) {
-                    li += 4;
-                    if (li + 3 >= lc) {
-                        break;
-                    }
-                    u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-                    u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-                } else {
-                    li += 4;
-                    ri += 4;
-                    if (li + 3 >= lc || ri + 3 >= rc) {
-                        break;
-                    }
-                    u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-                    u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                    v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-                }
-            }
-        }
-    }
-
-    cn_count = (ui)(cur_back_ptr - cn);
-
-    if (li < lc && ri < rc) {
-        while (true) {
-            while (larray[li] < rarray[ri]) {
-                li += 1;
-                if (li >= lc) {
-                    return;
-                }
-            }
-            while (larray[li] > rarray[ri]) {
-                ri += 1;
-                if (ri >= rc) {
-                    return;
-                }
-            }
-            if (larray[li] == rarray[ri]) {
-                // write back
-                cn[cn_count++] = larray[li];
-
-                li += 1;
-                ri += 1;
-                if (li >= lc || ri >= rc) {
-                    return;
-                }
-            }
-        }
-    }
-    return;
-}
-
-void ComputeSetIntersection::ComputeCNMergeBasedAVX512(const VertexID* larray, const ui l_count,
-                                                       const VertexID* rarray, const ui r_count,
-                                                       ui &cn_count) {
-    cn_count = 0;
-
-    if (l_count == 0 || r_count == 0)
-        return;
-
-    ui lc = l_count;
-    ui rc = r_count;
-
-    if (lc > rc) {
-        auto tmp = larray;
-        larray = rarray;
-        rarray = tmp;
-
-        ui tmp_count = lc;
-        lc = rc;
-        rc = tmp_count;
-    }
-
-    ui li = 0;
-    ui ri = 0;
-
-    constexpr int parallelism = 16;
-    __m512i st = _mm512_set_epi32(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
-    __m512i ssecountplus = _mm512_set1_epi32(1);
-    int cn_countv[parallelism] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-    __m512i ssecn_countv = _mm512_set1_epi32(0);
-    auto size1 = (rc) / (lc);
-
-    if (size1 > 2) {
-        if (li < lc && ri + 15 < rc) {
-            __m512i u_elements = _mm512_set1_epi32(larray[li]);
-            __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-
-            while (true) {
-                __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements, v_elements);
-                ssecn_countv = _mm512_mask_add_epi32(ssecn_countv, mask, ssecn_countv, ssecountplus);
-
-                if (larray[li] > rarray[ri + 15]) {
-                    ri += 16;
-                    if (ri + 15 >= rc) {
-                        break;
-                    }
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                } else {
-                    li += 1;
-                    if (li >= lc) {
-                        break;
-                    }
-                    u_elements = _mm512_set1_epi32(larray[li]);
-                }
-            }
-            _mm512_storeu_si512((__m512i *) cn_countv, ssecn_countv);
-            for (int cn_countvplus : cn_countv) { cn_count += cn_countvplus; }
-        }
-    } else {
-        if (li + 3 < lc && ri + 3 < rc) {
-            __m512i u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-            __m512i u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-            __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-            __m512i v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-
-            while (true) {
-                __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements_per, v_elements_per);
-                ssecn_countv = _mm512_mask_add_epi32(ssecn_countv, mask, ssecn_countv, ssecountplus);
-
-                if (larray[li + 3] > rarray[ri + 3]) {
-                    ri += 4;
-                    if (ri + 3 >= rc) {
-                        break;
-                    }
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                    v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-                } else if (larray[li + 3] < rarray[ri + 3]) {
-                    li += 4;
-                    if (li + 3 >= lc) {
-                        break;
-                    }
-                    u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-                    u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-                } else {
-                    li += 4;
-                    ri += 4;
-                    if (li + 3 >= lc || ri + 3 >= rc) {
-                        break;
-                    }
-                    u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
-                    u_elements_per = _mm512_permutevar_epi32(st, u_elements);
-                    v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
-                    v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
-                }
-            }
-            _mm512_storeu_si512((__m512i *) cn_countv, ssecn_countv);
-            for (int cn_countvplus : cn_countv) { cn_count += cn_countvplus; }
-        }
-    }
-
-    if (li < lc && ri < rc) {
-        while (true) {
-            while (larray[li] < rarray[ri]) {
-                li += 1;
-                if (li >= lc) {
-                    return;
-                }
-            }
-            while (larray[li] > rarray[ri]) {
-                ri += 1;
-                if (ri >= rc) {
-                    return;
-                }
-            }
-            if (larray[li] == rarray[ri]) {
-                cn_count += 1;
-                li += 1;
-                ri += 1;
-                if (li >= lc || ri >= rc) {
-                    return;
-                }
-            }
-        }
-    }
-}
-
-#elif SI == 2
-void ComputeSetIntersection::ComputeCNNaiveStdMerge(const VertexID* larray, const ui l_count,
-                                                    const VertexID* rarray, const ui r_count,
-                                                    VertexID* cn, ui &cn_count) {
+void ComputeSetIntersection::ComputeCNNaiveStdMerge(const Vertex* larray, const ui l_count,
+                                                    const Vertex* rarray, const ui r_count,
+                                                    Vertex* cn, ui &cn_count) {
     cn_count = 0;
 
     if (l_count == 0 || r_count == 0)
@@ -925,8 +574,8 @@ void ComputeSetIntersection::ComputeCNNaiveStdMerge(const VertexID* larray, cons
     }
 }
 
-void ComputeSetIntersection::ComputeCNNaiveStdMerge(const VertexID* larray, const ui l_count,
-                                                    const VertexID* rarray, const ui r_count,
+void ComputeSetIntersection::ComputeCNNaiveStdMerge(const Vertex* larray, const ui l_count,
+                                                    const Vertex* rarray, const ui r_count,
                                                     ui &cn_count) {
     cn_count = 0;
 
@@ -973,9 +622,9 @@ void ComputeSetIntersection::ComputeCNNaiveStdMerge(const VertexID* larray, cons
     }
 }
 
-void ComputeSetIntersection::ComputeCNGalloping(const VertexID* larray, const ui l_count,
-                                                const VertexID* rarray, const ui r_count,
-                                                VertexID* cn, ui &cn_count) {
+void ComputeSetIntersection::ComputeCNGalloping(const Vertex* larray, const ui l_count,
+                                                const Vertex* rarray, const ui r_count,
+                                                Vertex* cn, ui &cn_count) {
     ui lc = l_count;
     ui rc = r_count;
     cn_count = 0;
@@ -1020,8 +669,8 @@ void ComputeSetIntersection::ComputeCNGalloping(const VertexID* larray, const ui
     }
 }
 
-void ComputeSetIntersection::ComputeCNGalloping(const VertexID* larray, const ui l_count,
-                                                const VertexID* rarray, const ui r_count,
+void ComputeSetIntersection::ComputeCNGalloping(const Vertex* larray, const ui l_count,
+                                                const Vertex* rarray, const ui r_count,
                                                 ui &cn_count) {
     ui lc = l_count;
     ui rc = r_count;
@@ -1067,7 +716,7 @@ void ComputeSetIntersection::ComputeCNGalloping(const VertexID* larray, const ui
     }
 }
 
-const ui ComputeSetIntersection::GallopingSearch(const VertexID *src, const ui begin, const ui end,
+const ui ComputeSetIntersection::GallopingSearch(const Vertex *src, const ui begin, const ui end,
                                             const ui target) {
     if (src[end - 1] < target) {
         return end;
@@ -1099,7 +748,7 @@ const ui ComputeSetIntersection::GallopingSearch(const VertexID *src, const ui b
     }
 }
 
-const ui ComputeSetIntersection::BinarySearch(const VertexID *src, const ui begin, const ui end, const ui target) {
+const ui ComputeSetIntersection::BinarySearch(const Vertex *src, const ui begin, const ui end, const ui target) {
     int offset_begin = begin;
     int offset_end = end;
     while (offset_end - offset_begin >= 16) {
@@ -1124,4 +773,360 @@ const ui ComputeSetIntersection::BinarySearch(const VertexID *src, const ui begi
 
     return (ui)offset_end;
 }
+
+// #elif AVX==2
+// void ComputeSetIntersection::ComputeCNGallopingAVX512(const Vertex* larray, const ui l_count,
+//                                                           const Vertex* rarray, const ui r_count,
+//                                                           Vertex* cn, ui &cn_count) {
+//     cn_count = 0;
+
+//     if (l_count == 0 || r_count == 0)
+//         return;
+
+//     ui lc = l_count;
+//     ui rc = r_count;
+
+//     if (lc > rc) {
+//         auto tmp = larray;
+//         larray = rarray;
+//         rarray = tmp;
+
+//         ui tmp_count = lc;
+//         lc = rc;
+//         rc = tmp_count;
+//     }
+
+//     ui li = 0;
+//     ui ri = 0;
+
+//     while (true) {
+//         while (larray[li] < rarray[ri]) {
+//             li += 1;
+//             if (li >= lc) {
+//                 return;
+//             }
+//         }
+
+//         ri = Utility::GallopingSearchAVX512(rarray, ri, rc, larray[li]);
+//         if (ri >= rc) {
+//             return;
+//         }
+
+//         if (larray[li] == rarray[ri]) {
+//             cn[cn_count++] = larray[li];
+//             li += 1;
+//             ri += 1;
+//             if (li >= lc || ri >= rc) {
+//                 return;
+//             }
+//         }
+//     }
+// }
+
+// void ComputeSetIntersection::ComputeCNGallopingAVX512(const Vertex* larray, const ui l_count,
+//                                                           const Vertex* rarray, const ui r_count,
+//                                                           ui &cn_count) {
+//     cn_count = 0;
+
+//     if (l_count == 0 || r_count == 0)
+//         return;
+
+//     ui lc = l_count;
+//     ui rc = r_count;
+
+//     if (lc > rc) {
+//         auto tmp = larray;
+//         larray = rarray;
+//         rarray = tmp;
+
+//         ui tmp_count = lc;
+//         lc = rc;
+//         rc = tmp_count;
+//     }
+
+//     ui li = 0;
+//     ui ri = 0;
+
+//     while (true) {
+//         while (larray[li] < rarray[ri]) {
+//             li += 1;
+//             if (li >= lc) {
+//                 return;
+//             }
+//         }
+
+//         ri = Utility::GallopingSearchAVX512(rarray, ri, rc, larray[li]);
+//         if (ri >= rc) {
+//             return;
+//         }
+
+//         if (larray[li] == rarray[ri]) {
+//             cn_count += 1;
+//             li += 1;
+//             ri += 1;
+//             if (li >= lc || ri >= rc) {
+//                 return;
+//             }
+//         }
+//     }
+// }
+
+// void ComputeSetIntersection::ComputeCNMergeBasedAVX512(const Vertex* larray, const ui l_count,
+//                                                        const Vertex* rarray, const ui r_count,
+//                                                        Vertex* cn, ui &cn_count) {
+//     cn_count = 0;
+
+//     if (l_count == 0 || r_count == 0)
+//         return;
+
+//     ui lc = l_count;
+//     ui rc = r_count;
+
+//     if (lc > rc) {
+//         auto tmp = larray;
+//         larray = rarray;
+//         rarray = tmp;
+
+//         ui tmp_count = lc;
+//         lc = rc;
+//         rc = tmp_count;
+//     }
+
+//     ui li = 0;
+//     ui ri = 0;
+
+//     __m512i st = _mm512_set_epi32(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
+
+//     Vertex* cur_back_ptr = cn;
+
+//     auto size1 = (rc) / (lc);
+//     if (size1 > 2) {
+//         if (li < lc && ri + 15 < rc) {
+//             __m512i u_elements = _mm512_set1_epi32(larray[li]);
+//             __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+
+//             while (true) {
+//                 __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements, v_elements);
+//                 if (mask != 0x0000) {
+//                     // write back
+//                     _mm512_mask_compressstoreu_epi32(cur_back_ptr, mask, u_elements);
+//                     cur_back_ptr += _popcnt32(mask);
+//                 }
+
+//                 if (larray[li] > rarray[ri + 15]) {
+//                     ri += 16;
+//                     if (ri + 15 >= rc) {
+//                         break;
+//                     }
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                 } else {
+//                     li += 1;
+//                     if (li >= lc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_set1_epi32(larray[li]);
+//                 }
+//             }
+//         }
+//     } else {
+//         if (li + 3 < lc && ri + 3 < rc) {
+//             __m512i u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//             __m512i u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//             __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//             __m512i v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+
+//             while (true) {
+//                 __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements_per, v_elements_per);
+//                 if (mask != 0x0000) {
+//                     // write back
+//                     _mm512_mask_compressstoreu_epi32(cur_back_ptr, mask, u_elements_per);
+//                     cur_back_ptr += _popcnt32(mask);
+//                 }
+
+//                 if (larray[li + 3] > rarray[ri + 3]) {
+//                     ri += 4;
+//                     if (ri + 3 >= rc) {
+//                         break;
+//                     }
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                     v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+//                 } else if (larray[li + 3] < rarray[ri + 3]) {
+//                     li += 4;
+//                     if (li + 3 >= lc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//                     u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//                 } else {
+//                     li += 4;
+//                     ri += 4;
+//                     if (li + 3 >= lc || ri + 3 >= rc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//                     u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                     v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+//                 }
+//             }
+//         }
+//     }
+
+//     cn_count = (ui)(cur_back_ptr - cn);
+
+//     if (li < lc && ri < rc) {
+//         while (true) {
+//             while (larray[li] < rarray[ri]) {
+//                 li += 1;
+//                 if (li >= lc) {
+//                     return;
+//                 }
+//             }
+//             while (larray[li] > rarray[ri]) {
+//                 ri += 1;
+//                 if (ri >= rc) {
+//                     return;
+//                 }
+//             }
+//             if (larray[li] == rarray[ri]) {
+//                 // write back
+//                 cn[cn_count++] = larray[li];
+
+//                 li += 1;
+//                 ri += 1;
+//                 if (li >= lc || ri >= rc) {
+//                     return;
+//                 }
+//             }
+//         }
+//     }
+//     return;
+// }
+
+// void ComputeSetIntersection::ComputeCNMergeBasedAVX512(const Vertex* larray, const ui l_count,
+//                                                        const Vertex* rarray, const ui r_count,
+//                                                        ui &cn_count) {
+//     cn_count = 0;
+
+//     if (l_count == 0 || r_count == 0)
+//         return;
+
+//     ui lc = l_count;
+//     ui rc = r_count;
+
+//     if (lc > rc) {
+//         auto tmp = larray;
+//         larray = rarray;
+//         rarray = tmp;
+
+//         ui tmp_count = lc;
+//         lc = rc;
+//         rc = tmp_count;
+//     }
+
+//     ui li = 0;
+//     ui ri = 0;
+
+//     constexpr int parallelism = 16;
+//     __m512i st = _mm512_set_epi32(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
+//     __m512i ssecountplus = _mm512_set1_epi32(1);
+//     int cn_countv[parallelism] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+//     __m512i ssecn_countv = _mm512_set1_epi32(0);
+//     auto size1 = (rc) / (lc);
+
+//     if (size1 > 2) {
+//         if (li < lc && ri + 15 < rc) {
+//             __m512i u_elements = _mm512_set1_epi32(larray[li]);
+//             __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+
+//             while (true) {
+//                 __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements, v_elements);
+//                 ssecn_countv = _mm512_mask_add_epi32(ssecn_countv, mask, ssecn_countv, ssecountplus);
+
+//                 if (larray[li] > rarray[ri + 15]) {
+//                     ri += 16;
+//                     if (ri + 15 >= rc) {
+//                         break;
+//                     }
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                 } else {
+//                     li += 1;
+//                     if (li >= lc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_set1_epi32(larray[li]);
+//                 }
+//             }
+//             _mm512_storeu_si512((__m512i *) cn_countv, ssecn_countv);
+//             for (int cn_countvplus : cn_countv) { cn_count += cn_countvplus; }
+//         }
+//     } else {
+//         if (li + 3 < lc && ri + 3 < rc) {
+//             __m512i u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//             __m512i u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//             __m512i v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//             __m512i v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+
+//             while (true) {
+//                 __mmask16 mask = _mm512_cmpeq_epi32_mask(u_elements_per, v_elements_per);
+//                 ssecn_countv = _mm512_mask_add_epi32(ssecn_countv, mask, ssecn_countv, ssecountplus);
+
+//                 if (larray[li + 3] > rarray[ri + 3]) {
+//                     ri += 4;
+//                     if (ri + 3 >= rc) {
+//                         break;
+//                     }
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                     v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+//                 } else if (larray[li + 3] < rarray[ri + 3]) {
+//                     li += 4;
+//                     if (li + 3 >= lc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//                     u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//                 } else {
+//                     li += 4;
+//                     ri += 4;
+//                     if (li + 3 >= lc || ri + 3 >= rc) {
+//                         break;
+//                     }
+//                     u_elements = _mm512_loadu_si512((__m512i *) (larray + li));
+//                     u_elements_per = _mm512_permutevar_epi32(st, u_elements);
+//                     v_elements = _mm512_loadu_si512((__m512i *) (rarray + ri));
+//                     v_elements_per = _mm512_permute4f128_epi32(v_elements, 0b00000000);
+//                 }
+//             }
+//             _mm512_storeu_si512((__m512i *) cn_countv, ssecn_countv);
+//             for (int cn_countvplus : cn_countv) { cn_count += cn_countvplus; }
+//         }
+//     }
+
+//     if (li < lc && ri < rc) {
+//         while (true) {
+//             while (larray[li] < rarray[ri]) {
+//                 li += 1;
+//                 if (li >= lc) {
+//                     return;
+//                 }
+//             }
+//             while (larray[li] > rarray[ri]) {
+//                 ri += 1;
+//                 if (ri >= rc) {
+//                     return;
+//                 }
+//             }
+//             if (larray[li] == rarray[ri]) {
+//                 cn_count += 1;
+//                 li += 1;
+//                 ri += 1;
+//                 if (li >= lc || ri >= rc) {
+//                     return;
+//                 }
+//             }
+//         }
+//     }
+// }
+
 #endif
